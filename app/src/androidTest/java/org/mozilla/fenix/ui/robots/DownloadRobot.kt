@@ -12,20 +12,22 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.matcher.IntentMatchers
 import androidx.test.espresso.matcher.RootMatchers.isDialog
+import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiScrollable
+import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import org.hamcrest.CoreMatchers
 import org.mozilla.fenix.R
+import org.mozilla.fenix.helpers.Constants.PackageName.GOOGLE_APPS_PHOTOS
 import org.mozilla.fenix.helpers.TestAssetHelper
 import org.mozilla.fenix.helpers.TestHelper
 import org.mozilla.fenix.helpers.click
 import org.mozilla.fenix.helpers.ext.waitNotNull
-import org.mozilla.fenix.helpers.Constants.PackageName.GOOGLE_APPS_PHOTOS
 
 /**
  * Implementation of Robot Pattern for download UI handling.
@@ -80,7 +82,8 @@ class DownloadRobot {
                 TestAssetHelper.waitingTime
             )
 
-            val allowPermissionButton = mDevice.findObject(By.res(TestHelper.getPermissionAllowID() + ":id/permission_allow_button"))
+            val allowPermissionButton =
+                mDevice.findObject(By.res(TestHelper.getPermissionAllowID() + ":id/permission_allow_button"))
             allowPermissionButton.click()
 
             DownloadRobot().interact()
@@ -99,11 +102,22 @@ private fun assertDownloadPrompt() {
 }
 
 private fun assertDownloadNotificationShade() {
-    val mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     mDevice.openNotification()
-    mDevice.waitNotNull(
-        Until.findObjects(By.text("Download completed")), TestAssetHelper.waitingTime
+    fun notificationTray() = UiScrollable(
+        UiSelector().resourceId("com.android.systemui:id/notification_stack_scroller")
     )
+
+    var notificationFound = false
+    while (!notificationFound) {
+        notificationTray().scrollToEnd(5)
+        val downloadCompletedNotification = notificationTray().getChildByText(
+            UiSelector().resourceId("android:id/status_bar_latest_event_content"),
+            "Download completed",
+            true
+        )
+        downloadCompletedNotification.exists()
+        notificationFound = true
+    }
 
     // Go home (no UIDevice closeNotification) to close notification shade
     mDevice.pressHome()

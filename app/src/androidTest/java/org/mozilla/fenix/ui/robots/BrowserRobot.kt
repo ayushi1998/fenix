@@ -24,6 +24,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.By.text
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import org.hamcrest.CoreMatchers.allOf
@@ -329,7 +330,25 @@ class BrowserRobot {
 
         fun clickClosePrivateTabsNotification(interact: HomeScreenRobot.() -> Unit): HomeScreenRobot.Transition {
             mDevice.wait(Until.hasObject(text("Close private tabs")), waitingTime)
-            closePrivateTabsNotification().clickAndWaitForNewWindow(waitingTime)
+
+            // can I make this reusable?
+            fun notificationTray() = UiScrollable(
+                UiSelector().resourceId("com.android.systemui:id/notification_stack_scroller")
+            )
+
+            var notificationFound = false
+            while (!notificationFound) {
+                notificationTray().scrollToEnd(5)
+
+                val closePrivateTabsNotification = notificationTray().getChildByText(
+                    UiSelector().resourceId("android:id/status_bar_latest_event_content"),
+                    "Close private tabs",
+                    true
+                )
+                closePrivateTabsNotification.clickAndWaitForNewWindow()
+                notificationFound = true
+
+            }
 
             HomeScreenRobot().interact()
             return HomeScreenRobot.Transition()
@@ -352,9 +371,6 @@ fun dismissTrackingOnboarding() {
 fun navURLBar() = onView(withId(R.id.mozac_browser_toolbar_url_view))
 
 private fun tabsCounter() = onView(withId(R.id.mozac_browser_toolbar_browser_actions))
-
-private fun closePrivateTabsNotification() =
-    mDevice.findObject(UiSelector().text("Close private tabs"))
 
 private fun assertPrivateTabsNotification() {
     mDevice.findObject(UiSelector().text("Firefox Preview (Private)")).exists()
